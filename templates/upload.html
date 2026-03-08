@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Upload Resumes{% endblock %}
+{% block page_title %}Upload Resumes{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="form-card">
+      <p class="text-muted mb-4">Upload multiple resumes in PDF or DOCX format. The system will automatically screen and score each candidate.</p>
+      
+      {% if not roles %}
+      <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        No job roles configured. <a href="{{ url_for('seed_roles') }}">Load default IT roles</a> first.
+      </div>
+      {% else %}
+      
+      <form method="POST" enctype="multipart/form-data" id="uploadForm">
+        <div class="mb-4">
+          <label class="form-label">Select Job Role <span class="text-danger">*</span></label>
+          <select name="role_id" class="form-select" required>
+            <option value="">-- Choose a Job Role --</option>
+            {% for role in roles %}
+            <option value="{{ role.id }}">{{ role.title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="mb-4">
+          <label class="form-label">Upload Resumes (PDF / DOCX) <span class="text-danger">*</span></label>
+          <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+            <h5 class="text-muted">Click or drag files here</h5>
+            <p class="text-muted mb-1">Supports PDF and DOCX formats</p>
+            <small class="text-muted">Multiple files supported — max 16MB total</small>
+            <input type="file" name="resumes" id="fileInput" multiple accept=".pdf,.docx" class="d-none">
+          </div>
+          <div id="fileList" class="mt-2"></div>
+        </div>
+        
+        <div class="alert alert-info">
+          <h6 class="mb-2"><i class="fas fa-robot me-2"></i>What the System Extracts</h6>
+          <div class="row g-2">
+            {% for item in ["Candidate Name", "Email Address", "Phone Number", "Technical Skills", "Tools & Technologies", "Project Keywords", "Internship Details", "Work Experience"] %}
+            <div class="col-6"><small><i class="fas fa-check text-success me-1"></i>{{ item }}</small></div>
+            {% endfor %}
+          </div>
+        </div>
+        
+        <!-- SCORING INFO -->
+  
+        
+        <button type="submit" class="btn btn-primary w-100 py-2" id="submitBtn">
+          <i class="fas fa-search me-2"></i>Screen Resumes Now
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const fileInput = document.getElementById('fileInput');
+const uploadZone = document.getElementById('uploadZone');
+const fileList = document.getElementById('fileList');
+const submitBtn = document.getElementById('submitBtn');
+
+fileInput?.addEventListener('change', updateFileList);
+
+uploadZone?.addEventListener('dragover', e => {
+  e.preventDefault();
+  uploadZone.classList.add('dragover');
+});
+uploadZone?.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone?.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  fileInput.files = e.dataTransfer.files;
+  updateFileList();
+});
+
+function updateFileList() {
+  const files = Array.from(fileInput.files);
+  if (!files.length) return;
+  
+  const icons = { pdf: '📄', docx: '📝' };
+  fileList.innerHTML = `
+    <div class="p-2 bg-light rounded border">
+      <small class="text-muted fw-bold">${files.length} file(s) selected:</small>
+      ${files.map(f => {
+        const ext = f.name.split('.').pop().toLowerCase();
+        const size = (f.size / 1024).toFixed(0);
+        return `<div class="d-flex align-items-center gap-2 mt-1">
+          <span>${icons[ext] || '📁'}</span>
+          <small class="text-truncate flex-grow-1">${f.name}</small>
+          <small class="text-muted">${size} KB</small>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+document.getElementById('uploadForm')?.addEventListener('submit', function() {
+  if (submitBtn) {
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Screening in progress... please wait';
+    submitBtn.disabled = true;
+  }
+});
+</script>
+{% endblock %}
